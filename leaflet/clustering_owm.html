@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" integrity="sha256-kLaT2GOSpHechhsozzB+flnD+zUyjE2LlfWPgU04xyI=" crossorigin=""/>
+    <!-- Make sure you put this AFTER Leaflet's CSS -->
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js" integrity="sha256-WBkoXOwTeyKclOHuWtc+i2uENFpDZ9YPdf5Hf+D7ewM=" crossorigin=""></script>
+    <!-- Load Clustering files  -->
+    <link rel="stylesheet" href="http://pixel.uji.es/teaching/leaflet/markercluster-1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="http://pixel.uji.es/teaching/leaflet/markercluster-1.4.1/dist/MarkerCluster.Default.css" />
+    <script src="http://pixel.uji.es/teaching/leaflet/markercluster-1.4.1/dist/leaflet.markercluster-src.js"></script>
+    <!-- Load jQuery -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.3/jquery.min.js"></script>
+
+    <style>
+        body { padding: 0; margin: 0; } 
+        html, body, #map { height: 100%; width: 100vw; }
+    </style>
+
+    <title>Leaflet Clustering OpenWeatherMaps</title>
+</head>
+
+<body>
+    <div id="map"></div>
+    <script>
+        // Get the location from the Google API
+        var url_google = "https://www.googleapis.com/geolocation/v1/geolocate?key=AIzaSyA-8CTDisLXo_SLzKRQMv7ds4porl_cq9Q";
+        
+        $.post(url_google, 
+            function(success) {
+                //LOCATION FOUND
+                var lat = success.location.lat;
+                var lon = success.location.lng
+
+                // Create the Leaflet map variable and center in location
+                var map = L.map('map').setView([lat,lon], 10);
+
+                // Set the esri basemap to the map
+                var basemap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), TomTom, 2012'}).addTo(map);
+
+                // Get the weather stations closest to my location
+                var key ="8c8a482f0c519bcc56bf79715ea71154";
+                var service_url = "https://api.openweathermap.org/data/2.5/find?";
+                var url = service_url+'appid='+key+'&lat='+lat+'&lon='+lon+"&cnt=50&units=metric";
+                fetch(url)
+                .then(function(response){
+                    return response.json();
+                })
+                .then(function(json){
+                    // We have here all the weather stations
+                    console.log(json);
+                    // Define the Clustering Object
+                    // Create the Cluster, add the markers and add the layer
+                    var markers = L.markerClusterGroup();
+                    // Create a list of markers
+                    var markerList = [];
+                    stations = json.list;
+                    for (i=0; i<stations.length;i++){
+                        let station = stations[i];
+                        //Create a marker for the address point
+                        var marker = L.marker(L.latLng(station.coord.lat,station.coord.lon)).bindPopup("<b>Temperature: "+station.main.temp+"</b>");
+                        // Add the marker to the list
+                        markerList.push(marker);
+                    }
+                    // Add the marerlist to the clustering group
+                    markers.addLayers(markerList);
+                    //Add the clustering to the map as a layer
+                    map.addLayer(markers);
+                });
+        }); 
+
+    </script>
+</body>
+</html>
