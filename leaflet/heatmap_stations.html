@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" integrity="sha256-kLaT2GOSpHechhsozzB+flnD+zUyjE2LlfWPgU04xyI=" crossorigin=""/>
+    <!-- Make sure you put this AFTER Leaflet's CSS -->
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js" integrity="sha256-WBkoXOwTeyKclOHuWtc+i2uENFpDZ9YPdf5Hf+D7ewM=" crossorigin=""></script>
+    <!-- Load Heatmap files  -->
+    <script src="http://pixel.uji.es/teaching/leaflet/heatmap.min.js"></script>
+    <script src="http://pixel.uji.es/teaching/leaflet/leaflet-heatmap.js"></script>
+    <!-- Load jQuery -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.3/jquery.min.js"></script>
+
+    <style>
+        body { padding: 0; margin: 0; } 
+        html, body, #map { height: 100%; width: 100vw; }
+    </style>
+
+    <title>Leaflet Heatmap OpenWeatherMaps</title>
+</head>
+
+<body>
+    <div id="map"></div>
+    <script>
+        // Get the location from the Google API
+        var url_google = "https://www.googleapis.com/geolocation/v1/geolocate?key=AIzaSyA-8CTDisLXo_SLzKRQMv7ds4porl_cq9Q";
+        
+        $.post(url_google, 
+            function(success) {
+                //LOCATION FOUND
+                var lat = success.location.lat;
+                var lon = success.location.lng
+
+                // Get the weather stations closest to my location
+                var key ="8c8a482f0c519bcc56bf79715ea71154";
+                var service_url = "https://api.openweathermap.org/data/2.5/find?";
+                var url = service_url+'appid='+key+'&lat='+lat+'&lon='+lon+"&cnt=50&units=metric";
+                fetch(url)
+                .then(function(response){
+                    return response.json();
+                })
+                .then(function(json){
+                    
+                    // We have here all the weather stations
+                    console.log(json);
+
+                    // cfg heatmap
+                    var cfg = {
+                        // radius should be small ONLY if scaleRadius is true (or small radius is intended)
+                        // if scaleRadius is false it will be the constant radius used in pixels
+                        "radius": 0.05,
+                        "maxOpacity": .7,
+                        // scales the radius based on map zoom
+                        "scaleRadius": true,
+                        // if set to false the heatmap uses the global maximum for colorization
+                        // if activated: uses the data maximum within the current map boundaries
+                        //   (there will always be a red spot with useLocalExtremas true)
+                        "useLocalExtrema": true,
+                        // which field name in your data represents the latitude - default "lat"
+                        latField: 'lat',
+                        // which field name in your data represents the longitude - default "lng"
+                        lngField: 'lng',
+                        // which field name in your data represents the data value - default "value"
+                        valueField: 'count'
+                    };
+                    
+                    // Prepare the data
+                    var stations = json.list;
+                    var data_stations = [];
+                    
+                    for (i=0; i<stations.length;i++){
+                        let station = stations[i];
+                        var station_dict = {
+                            lat: station.coord.lat,
+                            lng: station.coord.lon,
+                            count: 1
+                        };
+                        data_stations.push(station_dict);
+                    }
+                    //console.log(data_stations);
+                    var heatmapData = {
+                        max: 15,
+                        data: data_stations
+                    };
+                    console.log(heatmapData);
+                    
+                    // Set the esri basemap to the map
+                    var basemap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), TomTom, 2012'});
+
+                    //Create the map
+                    var heatmapLayer = new HeatmapOverlay(cfg);
+                    var map = new L.Map('map', {
+                        center: new L.LatLng(lat,lon),
+                        zoom: 10,
+                        layers: [basemap,heatmapLayer]
+                    });
+
+                    heatmapLayer.setData(heatmapData);
+                });
+            }); 
+
+    </script>
+</body>
+</html>
