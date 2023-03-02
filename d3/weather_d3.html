@@ -1,0 +1,148 @@
+<html>
+
+<head>
+
+    <meta charset="utf-8">
+    <title>D3: A bar chart whose data updates with new data (labels, too)</title>
+    <script type="text/javascript" src="https://d3js.org/d3.v3.min.js"></script>
+    <!-- Load jQuery -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.3/jquery.min.js"></script>
+
+</head>
+
+<body>
+
+    <p>Get current temperatures from my location</p>
+
+    <script type="text/javascript">
+
+        //Width and height
+        var w = 600;
+        var h = 250;
+       
+        var dataset =  Array(20).fill(15)
+        
+        // Scale values to pixels dimension
+        var xScale = d3.scale.ordinal()
+            .domain(d3.range(dataset.length))
+            .rangeRoundBands([0, w], 0.05);
+
+        var yScale = d3.scale.linear()
+            .domain([0, d3.max(dataset)])
+            .range([0, h]);
+
+        //Trigger to update chart
+        d3.select("p")
+            .on("click",function() {
+                // Get the location from the Google API
+                var url_google = "https://www.googleapis.com/geolocation/v1/geolocate?key=AIzaSyA-8CTDisLXo_SLzKRQMv7ds4porl_cq9Q";
+                
+                $.post(url_google, 
+                    function(success) {
+                        //LOCATION FOUND
+                        var lat = success.location.lat;
+                        var lon = success.location.lng
+
+                        // Get the weather stations closest to my location
+                        var key ="8c8a482f0c519bcc56bf79715ea71154";
+                        var service_url = "https://api.openweathermap.org/data/2.5/find?";
+                        var url = service_url+'appid='+key+'&lat='+lat+'&lon='+lon+"&cnt=20&units=metric";
+                        fetch(url)
+                        .then(function(response){
+                            return response.json();
+                        })
+                        .then(function(json){
+                            // We have here all the weather stations
+                            console.log(json);
+                            // Prepare the data
+                            var stations = json.list;
+                            dataset = [];
+                            
+                            for (i=0; i<stations.length;i++){
+                                dataset.push(stations[i].main.temp);
+                            }
+                            console.log(dataset);
+                            //Recalculate Rectangles positions and colors
+                            svg.selectAll("rect")
+                                .data(dataset)
+                                .transition()
+                                .duration(2000)
+                                .attr("y", function(d) {
+                                    return h - yScale(d);
+                                })
+                                .attr("height", function(d) {
+                                    return yScale(d);
+                                })
+                                .attr("fill", function(d) {   
+                                    return "rgb(0, 0, " + (d * 10) + ")";
+                                });
+                                // Reallocate text labels
+                                svg.selectAll("text")
+                                    .data(dataset)
+                                    .transition()
+                                    .duration(2000)
+                                    .text(function(d) {
+                                            return Math.round(d * 10) / 10;
+                                    })
+                                    .attr("x", function(d, i) {
+                                            return xScale(i) + xScale.rangeBand() / 2;
+                                    })
+                                    .attr("y", function(d) {
+                                            return h - yScale(d) + 14;
+                                    });
+                        });
+                    });
+            });
+
+        //Create SVG element
+        var svg = d3.select("body")
+            .append("svg")
+            .attr("width", w)
+            .attr("height", h);
+
+        //Create bars
+        svg.selectAll("rect")
+            .data(dataset)
+            .enter()
+            .append("rect")
+            .attr("x", function(d, i) {
+                return xScale(i);
+            })
+            .attr("y", function(d) {
+                return h - yScale(d);
+            })
+
+            .attr("width", xScale.rangeBand())
+            .attr("height", function(d) {
+                return yScale(d);
+            })
+            .attr("fill", function(d) {
+                return "rgb(0, 0, " + (d * 10) + ")";
+            });
+
+
+
+        //Create labels
+        svg.selectAll("text")
+              .data(dataset)
+              .enter()
+              .append("text")
+              .text(function(d) {
+                return d;
+              })
+              .attr("text-anchor", "middle")
+              .attr("x", function(d, i) {
+                return xScale(i) + xScale.rangeBand() / 2;
+              })
+              .attr("y", function(d) {
+                return h - yScale(d) + 14;
+              })
+              .attr("font-family", "sans-serif")
+              .attr("font-size", "11px")
+              .attr("fill", "white");
+
+    </script>
+
+</body>
+
+</html>
