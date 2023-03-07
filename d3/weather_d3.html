@@ -47,6 +47,7 @@
                         var key ="8c8a482f0c519bcc56bf79715ea71154";
                         var service_url = "https://api.openweathermap.org/data/2.5/find?";
                         var url = service_url+'appid='+key+'&lat='+lat+'&lon='+lon+"&cnt=20&units=metric";
+                        console.log(url);
                         fetch(url)
                         .then(function(response){
                             return response.json();
